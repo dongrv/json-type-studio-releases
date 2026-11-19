@@ -1,0 +1,11 @@
+[package]
+name = "jts-policy-controller"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+base64 = "0.22"
+minisign-verify = "0.2"
+semver = "1"
+serde_json = "1"

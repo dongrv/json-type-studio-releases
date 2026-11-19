@@ -1,0 +1,77 @@
+name: Sign minimum supported version
+on:
+  push:
+    branches: [main]
+    paths: [update-policy.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: config-update-policy
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Acquire shared channel lock
+        id: channel_lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          owner=$(gh api --method POST "repos/$GITHUB_REPOSITORY/git/tags" -f tag=config-update-lock -f message="policy-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -f object="$GITHUB_SHA" -f type=commit --jq .sha)
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref=refs/tags/config-update-lock -f sha="$owner" >/dev/null
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+      - name: Read and verify current signed channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p state
+          gh release download config-updates --pattern planner.json --dir state
+          cargo run --release --locked --manifest-path Cargo.toml -- prepare state/planner.json update-policy.json state/payload.json
+      - name: Sign and independently verify amended channel
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          test -n "$TAURI_SIGNING_PRIVATE_KEY"
+          mkdir -p state/new
+          VERSION=$(node -p "require('./state/payload.json').version")
+          npx --yes @tauri-apps/cli@2.12.4 signer sign --app-version "$VERSION" state/payload.json
+          cargo run --release --locked --manifest-path Cargo.toml -- finish state/payload.json state/payload.json.sig state/new/planner.json
+      - name: Ensure channel and policy did not change while signing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p state/latest
+          gh release download config-updates --pattern planner.json --dir state/latest
+          cmp state/planner.json state/latest/planner.json
+          test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | cut -f1)"
+          cp state/planner.json state/planner-previous.json
+          gh release upload config-updates state/planner-previous.json --clobber
+          recover() {
+            if [ "$restore" = yes ]; then
+              for attempt in 1 2 3; do
+                gh release upload config-updates state/planner.json --clobber && return 0
+                sleep 5
+              done
+              echo 'Channel restore failed. The verified prior manifest is available as planner-previous.json.' >&2
+            fi
+          }
+          restore=yes
+          trap recover EXIT
+          gh release upload config-updates state/new/planner.json --clobber
+          restore=no
+      - name: Release shared channel lock
+        if: always() && steps.channel_lock.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LOCK_OWNER: ${{ steps.channel_lock.outputs.owner }}
+        run: |
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/config-update-lock" --jq .object.sha)
+          test "$current" = "$LOCK_OWNER"
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/config-update-lock"
