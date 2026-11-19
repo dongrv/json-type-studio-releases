@@ -6,7 +6,7 @@ JSON Type Studio 是 Windows 与 macOS 的本地 JSON 编辑器、阅读器和�
 
 ## 策划版 Config
 
-当前版本：[**0.3.1 下载与更新说明**](https://github.com/dongrv/json-type-studio-releases/releases/tag/config-v0.3.1)。历史版本见 [Config 下载列表](https://github.com/dongrv/json-type-studio-releases/releases)，请选择 `config-v` 开头的编号版本。
+当前版本：[**0.3.2 下载与更新说明**](https://github.com/dongrv/json-type-studio-releases/releases/tag/config-v0.3.2)。历史版本见 [Config 下载列表](https://github.com/dongrv/json-type-studio-releases/releases)，请选择 `config-v` 开头的编号版本。
 
 - Windows x64：下载 `windows-x86_64-setup.exe` 安装包，双击安装。
 - macOS Apple Silicon：选择 `darwin-aarch64.dmg`。
@@ -23,7 +23,9 @@ JSON Type Studio 是 Windows 与 macOS 的本地 JSON 编辑器、阅读器和�
 - 12–24px 阅读字号、舒适／大字预设、Ctrl＋滚轮缩放，离线内置开源字体。
 - 更明显的源码联动高亮、太阳／月亮一键切换主题，以及适应大字号和窄窗口的工具分组。
 
-Windows 从 0.2.0 起支持应用内检查和安装签名更新。0.3.1 为可选更新；更新前保留未保存的 JSON、JSONL 和类型标注草稿，必要更新时仍可保存、复制、导出当前工作。
+0.3.2 修复 Windows 更新时备份旧程序出现“拒绝访问”的问题。0.3.0／0.3.1 若遇到该问题，请先保存工作并关闭应用，然后手动安装 0.3.2；后续更新可在应用内操作。
+
+Windows 从 0.2.0 起支持应用内检查和安装签名更新。0.3.2 为可选更新；更新前保留未保存的 JSON、JSONL 和类型标注草稿，必要更新时仍可保存、复制、导出当前工作。
 
 macOS 包仍为未公证的预览构建。Mac 自动更新通道将在完成 Developer ID 签名、公证与安装验证后启用。
 
